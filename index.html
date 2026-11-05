@@ -27,7 +27,7 @@
   --glass-blur:24px; --glass-sat:180%; --glass-hi:rgba(255,255,255,.4); --glass-lo:rgba(255,255,255,.05);
 }
 *{box-sizing:border-box;margin:0;padding:0}
-.card,.hero,.stat,.ex,.sheet,.top,.tabs,.switch-row,.act,.chip,.pill,.pick-list,.modal,.btn.ghost,.day-h .ib,.stepper,select,.seg button,.ex-ed{
+.card,.hero,.stat,.ex,.sheet,.top,.tabs,.switch-row,.act,.chip,.pill,.pick-list,.modal,.btn.ghost,.day-h .ib,.stepper,select,.seg button,.ex-ed,.soc{
   backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-sat));
   -webkit-backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-sat));
 }
@@ -203,6 +203,19 @@ h1{font-size:clamp(23px,7vw,28px)}
 .switch.on{background:var(--leaf);border-color:var(--leaf);box-shadow:0 0 14px var(--glow)}
 .switch.on i{left:23px;background:var(--ink)}
 .actions{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:14px}
+.social{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.soc{display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:16px;background:rgba(255,255,255,.06);border:1px solid var(--line);box-shadow:inset 0 1px 0 rgba(255,255,255,.14),0 10px 24px -18px rgba(0,0,0,.6);text-decoration:none;color:var(--text);min-height:62px;transition:transform .15s,background .15s;min-width:0}
+.soc:active{transform:scale(.97);background:rgba(255,255,255,.1)}
+.soc i{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;flex:none;color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.45)}
+.soc i svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.soc span{min-width:0}
+.soc b{display:block;font-size:14px;line-height:1.2}
+.soc small{display:block;font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.soc.wa i{background:linear-gradient(160deg,#4be38a,#1fae55);box-shadow:inset 0 1px 0 rgba(255,255,255,.45),0 6px 16px -6px rgba(37,211,102,.7)}
+.soc.ig i{background:linear-gradient(45deg,#f9a03f,#e4405f 55%,#a23ae0);box-shadow:inset 0 1px 0 rgba(255,255,255,.45),0 6px 16px -6px rgba(228,64,95,.7)}
+.soc.fb i{background:linear-gradient(160deg,#4b95ff,#1a5fd6);box-shadow:inset 0 1px 0 rgba(255,255,255,.45),0 6px 16px -6px rgba(40,110,240,.7)}
+.soc.map i{background:linear-gradient(180deg,#ffc552,#f59e1c);color:var(--ink);box-shadow:inset 0 1px 0 rgba(255,240,200,.6),0 6px 16px -6px var(--glow)}
+.soc.full{grid-column:1/-1}
 .act{display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 4px;border-radius:14px;background:var(--card);border:1px solid var(--line);font-size:13px;font-weight:700;min-height:72px;justify-content:center}
 .act span{font-size:20px}.act small{font-weight:400;font-size:11px;color:var(--muted)}
 .day-h{display:flex;align-items:center;gap:6px;margin-bottom:10px}
@@ -723,6 +736,39 @@ function levelCard(m){
     ${bar}${noBirth}
     ${currentRk()==='custom'?`<div class="note" style="margin:12px 0 0">🧑‍🏫 Estás usando tu <b>rutina personalizada</b>${S.custom.coach?' de '+esc(S.custom.coach):''}.</div>`:''}</div>`;
 }
+/* ===================== CONTACTO Y REDES ===================== */
+const CONTACT = {
+  wa:'524111050808', waShow:'411 105 0808',
+  waMsg:'Hola Kong Gym 🦍, me gustaría recibir información.',
+  ig:'https://www.instagram.com/kong_gym_qro', igShow:'@kong_gym_qro',
+  fb:'https://www.facebook.com/share/1FszGB4WYo/', fbShow:'Kong Gym',
+  map:'https://maps.app.goo.gl/yGHHWn61HAicTTX2A'
+};
+const ICO = {
+  wa:'<svg viewBox="0 0 24 24"><path d="M21 11.5a8.5 8.5 0 0 1-12.6 7.4L3 20.5l1.6-5.2A8.5 8.5 0 1 1 21 11.5z"/><path d="M9 9.5c.3 2 2.2 4.2 4.5 4.8"/></svg>',
+  ig:'<svg viewBox="0 0 24 24"><path d="M4 8.5h3l2-3h6l2 3h3V19H4z"/><circle cx="12" cy="13.2" r="3.4"/></svg>',
+  fb:'<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 19c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="9" r="2.4"/><path d="M15.6 13.3A5 5 0 0 1 21 18"/></svg>',
+  map:'<svg viewBox="0 0 24 24"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>'
+};
+function socialButtons(){
+  const a=(cls,href,ico,t,sub)=>`<a class="soc ${cls}" href="${href}" target="_blank" rel="noopener"><i>${ico}</i><span><b>${t}</b><small>${sub}</small></span></a>`;
+  return `<div class="social">
+    ${a('wa',`https://wa.me/${CONTACT.wa}?text=${encodeURIComponent(CONTACT.waMsg)}`,ICO.wa,'WhatsApp',CONTACT.waShow)}
+    ${a('ig',CONTACT.ig,ICO.ig,'Instagram',CONTACT.igShow)}
+    ${a('fb',CONTACT.fb,ICO.fb,'Facebook',CONTACT.fbShow)}
+    ${a('map',CONTACT.map,ICO.map,'Cómo llegar','Mompani · Juriquilla')}
+  </div>`;
+}
+function contactCard(withHours){
+  return `<div class="card small">
+    ${withHours?`<div class="crit-row"><span>Lunes a viernes</span><b>6:00 am – 10:00 pm</b></div>
+    <div class="crit-row" style="margin-top:6px"><span>Sábados</span><b>9:00 am – 3:00 pm</b></div>
+    <p class="muted" style="margin-top:10px">Mompani, cerca de Juriquilla · Querétaro</p>`
+    :`<p class="muted">¿Dudas con tu membresía o tu rutina? Escríbenos o síguenos.</p>`}
+    ${socialButtons()}
+  </div>`;
+}
+
 function renderInicio(view,m){
   const idx=stageIdx(m), st=STAGES[idx], next=STAGES[idx+1], f=strengthFactor();
   const rk=currentRk(), r=routineByRk(rk); const sug=suggestedDay(rk); const sugDay=r.days.find(d=>d.k===sug);
@@ -759,11 +805,7 @@ function renderInicio(view,m){
       `<button class="btn" id="goTrain">Entrenar: ${esc(sugDay.n)}${rk==='custom'?' · personalizada':''}</button>`}
     <button class="btn ghost" id="quick">✓ Solo registrar que vine hoy</button>
     <h2>Kong Gym</h2>
-    <div class="card small">
-      <div class="crit-row"><span>Lunes a viernes</span><b>6:00 am – 10:00 pm</b></div>
-      <div class="crit-row" style="margin-top:6px"><span>Sábados</span><b>9:00 am – 3:00 pm</b></div>
-      <p class="muted" style="margin-top:10px">Mompani, cerca de Juriquilla · Querétaro · @kong_gym_qro</p>
-    </div>`;
+    ${contactCard(true)}`;
   const g=$('#goTrain'); if(g) g.onclick=()=>{ ui.mode=rk==='custom'?'custom':'kong'; ui.rk=rk==='custom'?null:rk; ui.day=sug; go('rutina'); };
   const gd=$('#goDraft'); if(gd) gd.onclick=()=>go('rutina');
   const ab=$('#addBirth'); if(ab) ab.onclick=()=>go('perfil');
@@ -1235,6 +1277,8 @@ function renderPerfil(view){
       :`<div class="card"><p class="small muted" style="margin-bottom:12px">Vincula tu membresía para que tu nivel y tu fecha de vencimiento salgan directo de recepción.</p>${linkFormHTML('Vincular membresía')}</div>`}`:''}
     <h2>App en tu celular</h2>
     ${installCard(true)}
+    <h2>Contacto y redes</h2>
+    ${contactCard(false)}
     <h2>Respaldo</h2>
     <div class="card"><p class="small muted" style="margin-bottom:10px">Tus datos viven en este teléfono. Copia tu respaldo y guárdalo (por ejemplo, mándatelo por WhatsApp) para no perderlos si cambias de celular.</p>
       <button class="btn ghost" id="bkCopy">Copiar mi respaldo</button>
