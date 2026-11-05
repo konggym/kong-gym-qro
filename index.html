@@ -226,6 +226,11 @@ h1{font-size:clamp(23px,7vw,28px)}
 .pick-item.new{color:var(--gold);font-weight:700}
 .sheet{max-height:90vh}
 @media (max-width:360px){.row.two{flex-direction:row;gap:8px}.reps-in{width:66px}.stepper button{width:36px}.stepper b{min-width:38px}.ex-ed-row{gap:6px}.actions{grid-template-columns:repeat(2,1fr)}.ex-ctrl .ib{width:34px;height:34px}}
+
+.install{border-color:rgba(255,178,46,.35)}
+.inst-ico{width:48px;height:48px;border-radius:12px;box-shadow:0 0 0 1px rgba(255,178,46,.5),0 0 18px rgba(255,170,40,.4)}
+.inst-steps{margin:10px 0 8px 20px;display:grid;gap:6px;font-size:14px}
+.ios-share{display:inline-block;padding:0 6px;border:1px solid var(--line);border-radius:6px;color:var(--leaf)}
 </style>
 </head>
 <body>
@@ -538,6 +543,42 @@ function bindOnboarding(){
   };
 }
 
+
+/* ===================== INSTALAR APP ===================== */
+let installEvt=null;
+window.addEventListener('beforeinstallprompt',e=>{ e.preventDefault(); installEvt=e; if(S.profile && (current()==='inicio'||current()==='perfil')) render(); });
+window.addEventListener('appinstalled',()=>{ installEvt=null; toast('¡App instalada! Búscala en tu pantalla de inicio 🦍'); render(); });
+function isStandalone(){ try{ return matchMedia('(display-mode: standalone)').matches || navigator.standalone===true; }catch(e){ return false; } }
+function isIOS(){ return /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1); }
+function installDismissed(){ try{ return Date.now()-(+localStorage.getItem('kong_install_no')||0) < 5*86400000; }catch(e){ return false; } }
+function installCard(always){
+  if(isStandalone()) return always?`<div class="card small"><b>✓ Ya tienes la app instalada.</b></div>`:'';
+  if(!always && installDismissed()) return '';
+  let body;
+  if(installEvt){
+    body=`<p class="small muted" style="margin:4px 0 12px">Ábrela desde tu pantalla de inicio, a pantalla completa y aunque no haya señal en el gym.</p>
+      <button class="btn" id="instBtn">Instalar Kong Gym</button>`;
+  } else if(isIOS()){
+    body=`<ol class="inst-steps">
+      <li>Toca <b>Compartir</b> <span class="ios-share">⬆</span> en la barra de Safari</li>
+      <li>Elige <b>Agregar a pantalla de inicio</b> (desliza hacia abajo si no la ves)</li>
+      <li>Toca <b>Agregar</b></li></ol>`;
+  } else {
+    body=`<ol class="inst-steps">
+      <li>Toca el menú <b>⋮</b> de tu navegador</li>
+      <li>Elige <b>Instalar app</b> o <b>Agregar a pantalla de inicio</b></li></ol>`;
+  }
+  return `<div class="card install">
+    <div style="display:flex;gap:12px;align-items:center"><img src="${document.querySelector('.logo img').src}" alt="" class="inst-ico">
+      <div><div class="eyebrow">Lleva Kong Gym contigo</div><h3>Instala la app</h3></div></div>
+    ${body}
+    ${always?'':`<button class="btn ghost" id="instNo" style="min-height:44px;padding:8px;font-size:14px">Ahora no</button>`}</div>`;
+}
+function bindInstall(){
+  const b=$('#instBtn'); if(b) b.onclick=async()=>{ if(!installEvt) return; installEvt.prompt(); try{ await installEvt.userChoice; }catch(e){} installEvt=null; render(); };
+  const n=$('#instNo'); if(n) n.onclick=()=>{ try{ localStorage.setItem('kong_install_no',Date.now()); }catch(e){} render(); };
+}
+
 /* ===================== INICIO ===================== */
 function critRow(label, val, need, fmt){
   const pct=need<=0?100:Math.min(100,val/need*100);
@@ -580,6 +621,7 @@ function renderInicio(view,m){
   view.innerHTML=`
     <h1>Hola, ${esc(first)}</h1>
     <p class="muted" style="margin-bottom:14px">${doneToday?'Hoy ya entrenaste. ¡Así se hace! 🌿':'¿Listo para entrenar hoy?'}</p>
+    ${installCard(false)}
     <div class="card hero">${LEAF_SVG}
       <div class="eyebrow">Etapa ${idx+1} de ${STAGES.length}</div>
       <div style="display:flex;align-items:center;gap:12px;margin-top:6px"><div class="stage-ico">${st.i}</div><h1>${st.n}</h1></div>
@@ -604,6 +646,7 @@ function renderInicio(view,m){
   const g=$('#goTrain'); if(g) g.onclick=()=>{ ui.mode=rk==='custom'?'custom':'kong'; ui.rk=rk==='custom'?null:rk; ui.day=sug; go('rutina'); };
   const gd=$('#goDraft'); if(gd) gd.onclick=()=>go('rutina');
   const ab=$('#addBirth'); if(ab) ab.onclick=()=>go('perfil');
+  bindInstall();
   $('#quick').onclick=()=>{
     if(doneToday){ toast('Ya registraste tu visita de hoy'); return; }
     finishSession({rk, day:null, dayName:'Asistencia', sets:[]});
@@ -1066,6 +1109,8 @@ function renderPerfil(view){
   view.innerHTML=`
     <h1 style="margin-bottom:12px">Tu perfil</h1>
     <div class="card">${profileFields(S.profile)}<button class="btn" id="pSave">Guardar cambios</button></div>
+    <h2>App en tu celular</h2>
+    ${installCard(true)}
     <h2>Respaldo</h2>
     <div class="card"><p class="small muted" style="margin-bottom:10px">Tus datos viven en este teléfono. Copia tu respaldo y guárdalo (por ejemplo, mándatelo por WhatsApp) para no perderlos si cambias de celular.</p>
       <button class="btn ghost" id="bkCopy">Copiar mi respaldo</button>
@@ -1073,7 +1118,7 @@ function renderPerfil(view){
       <button class="btn ghost" id="bkLoad" style="margin-top:10px">Restaurar respaldo</button></div>
     <button class="btn danger" id="reset" style="margin-top:8px">Borrar todos mis datos</button>
     <div class="logo-hero" style="max-width:220px;margin-top:20px"><img src="${LOGO_FULL}" alt="Kong Gym"></div><p class="small muted center">Kong Gym · Mompani, Querétaro</p>`;
-  bindSex();
+  bindSex(); bindInstall();
   $('#pSave').onclick=()=>{ const p=readProfile(); if(!validProfile(p)) return; S.profile=p; save(); toast('Perfil actualizado'); render(); };
   $('#bkCopy').onclick=async()=>{
     const code='KONG1:'+btoa(unescape(encodeURIComponent(JSON.stringify({profile:S.profile,sessions:S.sessions,custom:S.custom||null,useCustom:!!S.useCustom,exNames:S.exNames||{}}))));
