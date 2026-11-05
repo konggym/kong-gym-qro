@@ -652,7 +652,8 @@ function onboardingHTML(){
       ${linkFormHTML('Entrar')}
       <p class="small muted" style="margin-top:10px">Tu ID te lo dan en recepción. Si no lo recuerdas, pregúntalo ahí.</p></div>
       <button class="btn ghost" id="goManual">Soy visitante · aún no tengo ID</button>
-      <p class="small muted center" style="margin-top:12px">Tus entrenamientos se guardan en este teléfono.</p></div>`;
+      <p class="small muted center" style="margin-top:12px">Tus entrenamientos se guardan en este teléfono.</p>
+      <h2>Contáctanos</h2>${contactCard(true)}</div>`;
   }
   const pre = ui.linked ? {name:ui.linked.nombre, start:ui.linked.inscripcion||ymd(new Date()), birth:ui.linked.nacimiento||'', linked:true} : null;
   return `<div class="onb">${head}
@@ -660,7 +661,8 @@ function onboardingHTML(){
     <div class="card">${profileFields(pre)}
     <button class="btn" id="pSave">Empezar</button></div>
     ${sheetsOn()&&!pre?`<button class="btn ghost" id="goLink">Ya soy socio · entrar con mi ID</button>`:''}
-    <p class="small muted center" style="margin-top:12px">Tu edad y tu tiempo en el gym definen tu rutina. Tus datos se guardan en este teléfono.</p></div>`;
+    <p class="small muted center" style="margin-top:12px">Tu edad y tu tiempo en el gym definen tu rutina. Tus datos se guardan en este teléfono.</p>
+    <h2>Contáctanos</h2>${contactCard(true)}</div>`;
 }
 function bindOnboarding(){
   if($('#lkGo')){
