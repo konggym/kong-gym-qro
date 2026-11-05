@@ -231,6 +231,14 @@ h1{font-size:clamp(23px,7vw,28px)}
 .inst-ico{width:48px;height:48px;border-radius:12px;box-shadow:0 0 0 1px rgba(255,178,46,.5),0 0 18px rgba(255,170,40,.4)}
 .inst-steps{margin:10px 0 8px 20px;display:grid;gap:6px;font-size:14px}
 .ios-share{display:inline-block;padding:0 6px;border:1px solid var(--line);border-radius:6px;color:var(--leaf)}
+
+.mem{border-left:4px solid var(--leaf)}
+.mem.good{border-left-color:#5fd38a}.mem.warn{border-left-color:var(--gold)}.mem.bad{border-left-color:var(--danger)}
+.mem-h{display:flex;align-items:center;gap:8px}
+.mem-dot{width:10px;height:10px;border-radius:50%;background:#5fd38a;box-shadow:0 0 10px #5fd38a;flex:none}
+.mem.warn .mem-dot{background:var(--gold);box-shadow:0 0 10px var(--gold)}.mem.bad .mem-dot{background:var(--danger);box-shadow:0 0 10px var(--danger)}
+.mem-id{margin-left:auto;font-size:12px;color:var(--muted);font-weight:700}
+input:disabled{opacity:.7}
 </style>
 </head>
 <body>
@@ -497,6 +505,91 @@ function checkLevelUp(m){
     $('#mOk').onclick=()=>{ closeModal(); ui.rk=null; ui.day=null; go('rutina'); };
   }
 }
+/* ===================== MEMBRESÍA (Google Sheets) ===================== */
+const SHEETS_API = '';   // ← URL de la aplicación web de Apps Script (termina en /exec)
+const MEMBER_STALE_MIN = 30;
+function sheetsOn(){ return !!SHEETS_API; }
+async function fetchSocio(id,tel){
+  const ctl=('AbortController' in window)?new AbortController():null;
+  const t=setTimeout(()=>{ try{ctl&&ctl.abort();}catch(e){} },15000);
+  try{
+    const u=SHEETS_API+'?accion=socio&id='+encodeURIComponent(id)+'&tel='+encodeURIComponent(tel)+'&t='+Date.now();
+    const r=await fetch(u,{redirect:'follow',signal:ctl?ctl.signal:undefined});
+    return await r.json();
+  }catch(e){ return {ok:false,error:'red'}; }
+  finally{ clearTimeout(t); }
+}
+function memberError(r){
+  return ({
+    datos:'Revisa tu ID (ej. KG-008) y los 4 dígitos.',
+    no_coincide:'El ID o los 4 dígitos no coinciden con recepción.'+(r&&r.restantes!=null?` Te quedan ${r.restantes} intentos.`:''),
+    bloqueado:`Demasiados intentos. Espera ${(r&&r.minutos)||15} minutos.`,
+    sin_whatsapp:'Tu WhatsApp no está registrado. Pide en recepción que lo agreguen.',
+    red:'Sin conexión. Inténtalo cuando tengas internet.',
+    hoja:'Recepción está actualizando el sistema. Intenta más tarde.',
+    servidor:'Recepción está actualizando el sistema. Intenta más tarde.'
+  })[r&&r.error]||'No se pudo verificar. Intenta de nuevo.';
+}
+function applyMember(m){
+  if(!S.profile) return;
+  if(m.inscripcion) S.profile.start=m.inscripcion;
+  if(m.nacimiento) S.profile.birth=m.nacimiento;
+}
+let memberRefreshing=false;
+async function refreshMember(force){
+  if(!sheetsOn()||!S.member||memberRefreshing) return;
+  const age=(Date.now()-new Date(S.member.fetchedAt||0).getTime())/60000;
+  if(!force && age<MEMBER_STALE_MIN) return;
+  if(navigator.onLine===false) return;
+  memberRefreshing=true;
+  const r=await fetchSocio(S.member.id,S.member.tel4);
+  memberRefreshing=false;
+  if(r.ok){ S.member.data=r.socio; S.member.fetchedAt=r.actualizado||new Date().toISOString(); S.member.relink=false; applyMember(r.socio); save(); render(); }
+  else if(r.error==='no_coincide'||r.error==='sin_whatsapp'){ S.member.relink=true; save(); render(); }
+}
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible') refreshMember(false); });
+window.addEventListener('online',()=>refreshMember(false));
+function fmtLong(iso){ if(!iso) return ''; const [y,m,d]=iso.split('-').map(Number); return new Date(y,m-1,d).toLocaleDateString('es-MX',{day:'numeric',month:'long',year:'numeric'}); }
+function memberCard(){
+  if(!S.member||!S.member.data) return '';
+  const m=S.member.data;
+  if(S.member.relink) return `<div class="card mem warn"><b>⚠️ No pudimos verificar tu membresía.</b><p class="small muted" style="margin-top:4px">Puede que hayan cambiado tu WhatsApp en recepción.</p><button class="btn ghost" id="memRelink" style="margin-top:10px;min-height:44px">Volver a vincular</button></div>`;
+  const est=(m.estado||'').toLowerCase();
+  const cls = !m.activo?'bad': est.includes('vencido')?'bad': (est.includes('por vencer')||est.includes('hoy'))?'warn':'good';
+  const dias=m.dias;
+  const msg = !m.activo ? 'Tu membresía está dada de baja. Pasa a recepción para reactivarla.'
+    : cls==='bad' ? `Venció el ${fmtLong(m.vence)}. Renueva en recepción para seguir entrenando. 🦍`
+    : cls==='warn' ? (dias===0?'Vence hoy. ¡Renueva en recepción para no perder tu racha!':`Vence el ${fmtLong(m.vence)}. Renueva a tiempo para no perder tu racha.`)
+    : `Vigente hasta el ${fmtLong(m.vence)}${dias!=null?` · ${dias} ${dias===1?'día':'días'}`:''}`;
+  const upd=S.member.fetchedAt?new Date(S.member.fetchedAt):null;
+  return `<div class="card mem ${cls}">
+    <div class="mem-h"><span class="mem-dot"></span><b>${esc(m.membresia||'Membresía')}${m.plan?' · '+esc(m.plan):''}</b><span class="mem-id">${esc(m.id)}</span></div>
+    <p style="margin-top:6px">${msg}</p>
+    ${upd?`<p class="small muted" style="margin-top:4px">Actualizado ${upd.toLocaleString('es-MX',{day:'numeric',month:'short',hour:'numeric',minute:'2-digit'})}</p>`:''}</div>`;
+}
+function linkFormHTML(btnLabel){
+  return `<label class="f"><span>Tu ID de socio</span><input id="lkId" placeholder="KG-008" autocapitalize="characters" autocomplete="off" maxlength="9" style="text-transform:uppercase"></label>
+    <label class="f"><span>Últimos 4 dígitos de tu WhatsApp</span><input id="lkTel" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="••••" autocomplete="off" style="letter-spacing:.3em"></label>
+    <button class="btn" id="lkGo">${btnLabel}</button>`;
+}
+function bindLinkForm(onOk){
+  const go=async()=>{
+    let id=$('#lkId').value.trim().toUpperCase().replace(/\s+/g,'');
+    if(/^\d+$/.test(id)) id='KG-'+id.padStart(3,'0');
+    if(/^KG\d+$/.test(id)) id='KG-'+id.slice(2);
+    const tel=$('#lkTel').value.replace(/\D/g,'');
+    if(!/^KG-\d{1,5}$/.test(id)||tel.length!==4){ toast('Escribe tu ID (KG-008) y 4 dígitos'); return; }
+    const b=$('#lkGo'); b.disabled=true; const old=b.textContent; b.textContent='Verificando…';
+    const r=await fetchSocio(id,tel);
+    b.disabled=false; b.textContent=old;
+    if(!r.ok){ toast(memberError(r)); return; }
+    S.member={id,tel4:tel,data:r.socio,fetchedAt:r.actualizado||new Date().toISOString(),relink:false};
+    onOk(r.socio);
+  };
+  $('#lkGo').onclick=go;
+  $('#lkTel').onkeydown=e=>{ if(e.key==='Enter') go(); };
+}
+
 /* ===================== ONBOARDING / PERFIL FORM ===================== */
 function profileFields(p){
   p=p||{};
@@ -509,7 +602,7 @@ function profileFields(p){
     <label class="f"><span>Peso corporal (kg)</span><input id="pWeight" inputmode="decimal" value="${esc(p.weight||'')}" placeholder="70"></label>
   </div>
   <div class="row">
-    <label class="f"><span>¿Desde cuándo entrenas en Kong Gym?</span><input id="pStart" type="date" value="${esc(p.start||ymd(new Date()))}" max="${ymd(new Date())}"></label>
+    <label class="f"><span>${p.linked?'Inscrito desde (según recepción)':'¿Desde cuándo entrenas en Kong Gym?'}</span><input id="pStart" type="date" value="${esc(p.start||ymd(new Date()))}" max="${ymd(new Date())}" ${p.linked?'disabled':''}></label>
     <label class="f" style="flex:.6"><span>Días por semana</span><select id="pDays">${[2,3,4,5,6].map(d=>`<option ${ (p.days||3)==d?'selected':''}>${d}</option>`).join('')}</select></label>
   </div>`;
 }
@@ -528,21 +621,38 @@ function validProfile(p){
 }
 function bindSex(){ document.querySelectorAll('#pSex button').forEach(b=>b.onclick=()=>{ document.querySelectorAll('#pSex button').forEach(x=>x.classList.remove('on')); b.classList.add('on'); }); }
 function onboardingHTML(){
-  return `<div class="onb">
-    <div class="center"><div class="logo-hero"><img src="${LOGO_FULL}" alt="Kong Gym"></div><h1 style="margin-top:4px">Bienvenido a tu jungla</h1>
-    <p class="muted" style="margin:8px 0 22px">Tu rutina, tu progreso y tu etapa en Kong Gym, en un solo lugar.</p></div>
-    <div class="card">${profileFields(null)}
+  const head=`<div class="center"><div class="logo-hero"><img src="${LOGO_FULL}" alt="Kong Gym"></div><h1 style="margin-top:4px">Bienvenido a tu jungla</h1>
+    <p class="muted" style="margin:8px 0 22px">Tu rutina, tu progreso y tu etapa en Kong Gym, en un solo lugar.</p></div>`;
+  if(sheetsOn() && !ui.manual && !ui.linked){
+    return `<div class="onb">${head.replace('class="logo-hero"','class="logo-hero" style="max-width:230px"')}
+      <div class="card"><div class="eyebrow">Socios Kong Gym</div><h3 style="margin:4px 0 12px">Entra con tu membresía</h3>
+      ${linkFormHTML('Entrar')}
+      <p class="small muted" style="margin-top:10px">Tu ID te lo dan en recepción. Si no lo recuerdas, pregúntalo ahí.</p></div>
+      <button class="btn ghost" id="goManual">Soy visitante · aún no tengo ID</button>
+      <p class="small muted center" style="margin-top:12px">Tus entrenamientos se guardan en este teléfono.</p></div>`;
+  }
+  const pre = ui.linked ? {name:ui.linked.nombre, start:ui.linked.inscripcion||ymd(new Date()), birth:ui.linked.nacimiento||'', linked:true} : null;
+  return `<div class="onb">${head}
+    ${pre?`<div class="note">✓ Hola <b>${esc(pre.name.split(' ')[0])}</b>, encontramos tu membresía <b>${esc(ui.linked.membresia||'')}</b>. Completa tus datos para armar tu rutina.</div>`:''}
+    <div class="card">${profileFields(pre)}
     <button class="btn" id="pSave">Empezar</button></div>
-    <p class="small muted center">Tu edad y tu tiempo en el gym definen tu rutina. Tus datos se guardan en este teléfono.</p></div>`;
+    ${sheetsOn()&&!pre?`<button class="btn ghost" id="goLink">Ya soy socio · entrar con mi ID</button>`:''}
+    <p class="small muted center" style="margin-top:12px">Tu edad y tu tiempo en el gym definen tu rutina. Tus datos se guardan en este teléfono.</p></div>`;
 }
 function bindOnboarding(){
+  if($('#lkGo')){
+    bindLinkForm(socio=>{ ui.linked=socio; render(); window.scrollTo(0,0); });
+    $('#goManual').onclick=()=>{ ui.manual=true; S.member=null; render(); };
+    return;
+  }
   bindSex();
+  const gl=$('#goLink'); if(gl) gl.onclick=()=>{ ui.manual=false; render(); };
   $('#pSave').onclick=()=>{
     const p=readProfile(); if(!validProfile(p)) return;
-    S.profile=p; S.seenLevel=levelIdx(monthsIn()); save(); location.hash='inicio'; render();
+    if(ui.linked){ p.linked=true; applyMember.call(null,ui.linked); p.start=ui.linked.inscripcion||p.start; if(ui.linked.nacimiento) p.birth=ui.linked.nacimiento; }
+    S.profile=p; if(!ui.linked) S.member=null; S.seenLevel=levelIdx(monthsIn()); ui.linked=null; save(); location.hash='inicio'; render();
   };
 }
-
 
 /* ===================== INSTALAR APP ===================== */
 let installEvt=null;
@@ -621,6 +731,7 @@ function renderInicio(view,m){
   view.innerHTML=`
     <h1>Hola, ${esc(first)}</h1>
     <p class="muted" style="margin-bottom:14px">${doneToday?'Hoy ya entrenaste. ¡Así se hace! 🌿':'¿Listo para entrenar hoy?'}</p>
+    ${memberCard()}
     ${installCard(false)}
     <div class="card hero">${LEAF_SVG}
       <div class="eyebrow">Etapa ${idx+1} de ${STAGES.length}</div>
@@ -646,7 +757,8 @@ function renderInicio(view,m){
   const g=$('#goTrain'); if(g) g.onclick=()=>{ ui.mode=rk==='custom'?'custom':'kong'; ui.rk=rk==='custom'?null:rk; ui.day=sug; go('rutina'); };
   const gd=$('#goDraft'); if(gd) gd.onclick=()=>go('rutina');
   const ab=$('#addBirth'); if(ab) ab.onclick=()=>go('perfil');
-  bindInstall();
+  const rl=$('#memRelink'); if(rl) rl.onclick=()=>go('perfil');
+  bindInstall(); refreshMember(false);
   $('#quick').onclick=()=>{
     if(doneToday){ toast('Ya registraste tu visita de hoy'); return; }
     finishSession({rk, day:null, dayName:'Asistencia', sets:[]});
@@ -1108,7 +1220,9 @@ function renderEtapas(view,m){
 function renderPerfil(view){
   view.innerHTML=`
     <h1 style="margin-bottom:12px">Tu perfil</h1>
-    <div class="card">${profileFields(S.profile)}<button class="btn" id="pSave">Guardar cambios</button></div>
+    <div class="card">${profileFields(Object.assign({},S.profile,{linked:!!S.member}))}<button class="btn" id="pSave">Guardar cambios</button></div>
+    ${sheetsOn()?`<h2>Mi membresía</h2>${S.member&&!S.member.relink?`${memberCard()}<div class="row two"><button class="btn ghost" id="memRefresh">Actualizar</button><button class="btn ghost" id="memUnlink">Desvincular</button></div>`
+      :`<div class="card"><p class="small muted" style="margin-bottom:12px">Vincula tu membresía para que tu nivel y tu fecha de vencimiento salgan directo de recepción.</p>${linkFormHTML('Vincular membresía')}</div>`}`:''}
     <h2>App en tu celular</h2>
     ${installCard(true)}
     <h2>Respaldo</h2>
@@ -1119,9 +1233,12 @@ function renderPerfil(view){
     <button class="btn danger" id="reset" style="margin-top:8px">Borrar todos mis datos</button>
     <div class="logo-hero" style="max-width:220px;margin-top:20px"><img src="${LOGO_FULL}" alt="Kong Gym"></div><p class="small muted center">Kong Gym · Mompani, Querétaro</p>`;
   bindSex(); bindInstall();
+  if($('#lkGo')) bindLinkForm(socio=>{ applyMember(socio); if(socio.nombre) S.profile.name=socio.nombre; save(); toast('¡Membresía vinculada! 🦍'); render(); });
+  const mr=$('#memRefresh'); if(mr) mr.onclick=async()=>{ mr.disabled=true; mr.textContent='Actualizando…'; await refreshMember(true); if(document.body.contains(mr)){ mr.disabled=false; mr.textContent='Actualizar'; } };
+  const mu=$('#memUnlink'); if(mu) mu.onclick=()=>confirmBox('¿Desvincular tu membresía de este teléfono? Tu progreso se conserva.','Desvincular',()=>{ S.member=null; save(); render(); });
   $('#pSave').onclick=()=>{ const p=readProfile(); if(!validProfile(p)) return; S.profile=p; save(); toast('Perfil actualizado'); render(); };
   $('#bkCopy').onclick=async()=>{
-    const code='KONG1:'+btoa(unescape(encodeURIComponent(JSON.stringify({profile:S.profile,sessions:S.sessions,custom:S.custom||null,useCustom:!!S.useCustom,exNames:S.exNames||{}}))));
+    const code='KONG1:'+btoa(unescape(encodeURIComponent(JSON.stringify({profile:S.profile,sessions:S.sessions,custom:S.custom||null,useCustom:!!S.useCustom,exNames:S.exNames||{},member:S.member||null}))));
     try{ await navigator.clipboard.writeText(code); toast('Respaldo copiado'); }
     catch(e){ $('#bkIn').value=code; $('#bkIn').select(); toast('Cópialo del cuadro de abajo'); }
   };
@@ -1130,7 +1247,7 @@ function renderPerfil(view){
       const raw=$('#bkIn').value.trim().replace(/^KONG1:/,'');
       const data=JSON.parse(decodeURIComponent(escape(atob(raw))));
       if(!data.profile||!Array.isArray(data.sessions)) throw 0;
-      confirmBox('¿Reemplazar tus datos actuales con este respaldo?','Restaurar',()=>{ S={profile:data.profile,sessions:data.sessions,draft:null,custom:data.custom||null,useCustom:!!data.useCustom,exNames:data.exNames||{},seenLevel:null}; save(); toast('Respaldo restaurado'); render(); });
+      confirmBox('¿Reemplazar tus datos actuales con este respaldo?','Restaurar',()=>{ S={profile:data.profile,sessions:data.sessions,draft:null,custom:data.custom||null,useCustom:!!data.useCustom,exNames:data.exNames||{},member:data.member||null,seenLevel:null}; save(); toast('Respaldo restaurado'); render(); });
     }catch(e){ toast('Ese respaldo no es válido'); }
   };
   $('#reset').onclick=()=>confirmBox('¿Borrar todo tu progreso? No se puede deshacer.','Borrar todo',()=>{ S={profile:null,sessions:[],draft:null}; save(); location.hash=''; render(); });
