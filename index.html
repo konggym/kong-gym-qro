@@ -27,7 +27,7 @@
   --glass-blur:24px; --glass-sat:180%; --glass-hi:rgba(255,255,255,.4); --glass-lo:rgba(255,255,255,.05);
 }
 *{box-sizing:border-box;margin:0;padding:0}
-.card,.hero,.stat,.ex,.sheet,.top,.tabs,.switch-row,.act,.chip,.pill,.pick-list,.modal,.btn.ghost,.day-h .ib,.stepper{
+.card,.hero,.stat,.ex,.sheet,.top,.tabs,.switch-row,.act,.chip,.pill,.pick-list,.modal,.btn.ghost,.day-h .ib,.stepper,select,.seg button,.ex-ed{
   backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-sat));
   -webkit-backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-sat));
 }
@@ -97,7 +97,7 @@ h3{font-size:18px;line-height:1.2}
 .set{display:grid;grid-template-columns:28px 1fr 1fr 40px;gap:8px;align-items:center}
 .set .no{font-size:13px;color:var(--muted);text-align:center}
 .set input{padding:9px 10px;text-align:center}
-.chk{width:40px;height:40px;border-radius:12px;border:1px solid var(--line);display:grid;place-items:center;font-size:18px;color:transparent;background:var(--bg2)}
+.chk{width:40px;height:40px;border-radius:12px;border:1px solid var(--line);display:grid;place-items:center;font-size:18px;color:transparent;background:rgba(255,255,255,.05);box-shadow:inset 0 1px 0 rgba(255,255,255,.1)}
 .chk.on{background:var(--leaf);color:var(--ink);border-color:var(--leaf);box-shadow:0 0 14px var(--glow)}
 .sethead{display:grid;grid-template-columns:28px 1fr 1fr 40px;gap:8px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;text-align:center}
 .sticky-finish{position:fixed;left:0;right:0;bottom:78px;padding:0 16px;z-index:6}
@@ -120,11 +120,11 @@ h3{font-size:18px;line-height:1.2}
 svg.chart{width:100%;height:auto;display:block;margin-top:8px}
 .hist{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}
 .hist:last-child{border-bottom:0}
-.x{width:34px;height:34px;border-radius:10px;color:var(--muted);border:1px solid var(--line)}
+.x{width:34px;height:34px;border-radius:10px;color:var(--muted);border:1px solid var(--line);background:rgba(255,255,255,.05);box-shadow:inset 0 1px 0 rgba(255,255,255,.1)}
 label.f{display:block;margin-bottom:12px}
 label.f>span{display:block;font-size:13px;color:var(--muted);margin-bottom:5px}
 .seg{display:flex;gap:8px}
-.seg button{flex:1;padding:11px;border-radius:12px;background:var(--bg2);border:1px solid var(--line)}
+.seg button{flex:1;padding:11px;border-radius:12px;background:rgba(255,255,255,.05);border:1px solid var(--line);box-shadow:inset 0 1px 0 rgba(255,255,255,.1)}
 .seg button.on{background:var(--leaf);color:var(--ink);font-weight:700;border-color:var(--leaf)}
 .modal{position:fixed;inset:0;z-index:20;background:rgba(5,10,24,.5);display:flex;align-items:flex-end;justify-content:center;padding:16px}
 .modal.hidden{display:none}
@@ -208,10 +208,10 @@ h1{font-size:clamp(23px,7vw,28px)}
 .day-h{display:flex;align-items:center;gap:6px;margin-bottom:10px}
 .dnum{width:30px;height:30px;border-radius:9px;background:var(--leaf);color:var(--ink);display:grid;place-items:center;font-family:var(--display);flex:none;box-shadow:0 0 12px var(--glow)}
 .day-name{font-weight:700;padding:9px 10px;min-width:0;flex:1}
-.ib{width:40px;height:40px;flex:none;border-radius:11px;background:var(--bg2);border:1px solid var(--line);font-size:16px;display:grid;place-items:center}
+.ib{width:40px;height:40px;flex:none;border-radius:11px;background:rgba(255,255,255,.05);border:1px solid var(--line);font-size:16px;display:grid;place-items:center;box-shadow:inset 0 1px 0 rgba(255,255,255,.1)}
 .ib:disabled{opacity:.3}
 .ib.red{color:var(--danger)}
-.ex-ed{background:var(--bg2);border:1px solid var(--line);border-radius:14px;padding:10px 10px 10px 12px;margin-bottom:8px}
+.ex-ed{background:var(--bg2);border:1px solid var(--line);border-radius:14px;padding:10px 10px 10px 12px;margin-bottom:8px;box-shadow:inset 0 1px 0 var(--glass-hi)}
 .ex-ed-top{display:flex;justify-content:space-between;align-items:center;gap:8px}
 .ex-ctrl{display:flex;gap:4px}
 .ex-ctrl .ib{width:36px;height:36px;font-size:14px}
@@ -227,9 +227,10 @@ h1{font-size:clamp(23px,7vw,28px)}
 .row.two{gap:10px}.row.two .btn{margin-top:0}.row.two .btn:first-child{flex:.6}
 .chips{display:flex;flex-wrap:wrap;gap:8px}
 .pick-h{display:flex;justify-content:space-between;align-items:center;gap:10px}
-.pick-list{max-height:45vh;overflow:auto;border:1px solid var(--line);border-radius:14px;background:var(--bg2);-webkit-overflow-scrolling:touch}
-.pick-item{display:flex;justify-content:space-between;align-items:center;width:100%;text-align:left;padding:13px 14px;border-bottom:1px solid var(--line);min-height:50px;gap:10px}
+.pick-list{max-height:45vh;overflow:auto;border:1px solid var(--line);border-radius:14px;background:var(--bg2);-webkit-overflow-scrolling:touch;box-shadow:inset 0 1px 0 var(--glass-hi)}
+.pick-item{display:flex;justify-content:space-between;align-items:center;width:100%;text-align:left;padding:13px 14px;border-bottom:1px solid var(--line);min-height:50px;gap:10px;transition:background .15s}
 .pick-item:last-child{border-bottom:0}
+.pick-item:active{background:rgba(255,255,255,.06)}
 .pick-item .add{color:var(--leaf);font-size:20px;font-weight:700}
 .pick-item .in{color:var(--muted);font-size:12px;white-space:nowrap}
 .pick-item.new{color:var(--gold);font-weight:700}
