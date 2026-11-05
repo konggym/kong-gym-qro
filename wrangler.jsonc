@@ -1,0 +1,9 @@
+{
+  // Configuración para Cloudflare Workers (sitio estático). Cloudflare Pages la ignora.
+  "name": "kong-gym-qro",
+  "compatibility_date": "2026-11-01",
+  "assets": {
+    "directory": ".",
+    "not_found_handling": "single-page-application"
+  }
+}
