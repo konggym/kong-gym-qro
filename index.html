@@ -369,8 +369,8 @@ label.f>span{display:block;font-size:13px;color:var(--muted);margin:0 0 6px 4px}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 
 /* ---------- Fondo vivo: selva + concreto difuminados ---------- */
-:root{--jg-leaf:#46672d;--jg-op:.2;--jg-blur:16px;--ray:rgba(255,246,222,.55);--seam:rgba(70,64,56,.13)}
-@media (prefers-color-scheme:dark){:root{--jg-leaf:#2f5426;--jg-op:.42;--ray:rgba(255,236,200,.07);--seam:rgba(255,250,240,.05)}}
+:root{--jg-leaf:#3d6a27;--jg-op:.3;--jg-blur:9px;--ray:rgba(255,246,222,.55);--seam:rgba(70,64,56,.13)}
+@media (prefers-color-scheme:dark){:root{--jg-leaf:#2f5a24;--jg-op:.55;--ray:rgba(255,236,200,.07);--seam:rgba(255,250,240,.05)}}
 #jungle{position:fixed;inset:0;z-index:-2;overflow:hidden;pointer-events:none}
 .jg-concrete{position:absolute;inset:-4%;filter:blur(1.2px);
   background-image:
@@ -384,10 +384,10 @@ label.f>span{display:block;font-size:13px;color:var(--muted);margin:0 0 6px 4px}
   background:repeating-linear-gradient(112deg,transparent 0 9%,var(--ray) 11%,transparent 15% 24%);
   animation:rays 22s ease-in-out infinite alternate;will-change:transform,opacity}
 .jg-leaf{position:absolute;color:var(--jg-leaf);opacity:calc(var(--jg-op)*var(--o));filter:blur(var(--jg-blur));
-  transform-origin:50% 95%;transform:scaleX(var(--fx)) rotate(var(--r));
+  transform-origin:50% 95%;transform:rotate(var(--r)) scaleX(var(--fx));
   animation:sway ease-in-out infinite alternate;will-change:transform}
 .jg-leaf svg{width:100%;height:100%;display:block}
-@keyframes sway{from{transform:scaleX(var(--fx)) rotate(var(--r)) translate3d(0,0,0)}to{transform:scaleX(var(--fx)) rotate(calc(var(--r) + 5deg)) translate3d(1.5%,-1.2%,0)}}
+@keyframes sway{from{transform:rotate(var(--r)) scaleX(var(--fx))}to{transform:rotate(calc(var(--r) + 4deg)) translate3d(0,-1.5%,0) scaleX(var(--fx))}}
 @keyframes rays{from{transform:translate3d(-4%,0,0);opacity:.55}to{transform:translate3d(5%,0,0);opacity:1}}
 
 /* ---------- Animación de entrada ---------- */
@@ -490,15 +490,15 @@ const LEAF_KIND={palm:()=>frondSVG(),broad:broadSVG,fern:fernSVG};
 /* Fondo: follaje difuminado que se mece en bucle + concreto + haces de luz */
 (function buildJungle(){
   const el=document.getElementById('jungle'); if(!el) return;
-  const F=[ // x,y en %, tamaño en vmax, rotación, voltear, duración, retraso, tipo, opacidad
-    {x:-14,y:-12,s:62,r:128,f:0,d:14,dl:0,k:'palm',o:1},
-    {x:70,y:-16,s:58,r:-140,f:1,d:17,dl:-6,k:'palm',o:.9},
-    {x:-20,y:58,s:56,r:38,f:0,d:16,dl:-3,k:'broad',o:.8},
-    {x:78,y:52,s:60,r:-30,f:1,d:13,dl:-8,k:'palm',o:1},
-    {x:28,y:86,s:46,r:8,f:0,d:19,dl:-11,k:'fern',o:.7},
-    {x:86,y:18,s:34,r:-72,f:1,d:15,dl:-4,k:'broad',o:.55}
+  const F=[ // base de la hoja en la orilla (x vw, y vh), tamaño vmax, giro (0 = hacia arriba), voltear, duración, retraso, tipo, opacidad
+    {x:-3,y:-3,s:46,r:138,f:0,d:14,dl:0,k:'palm',o:1},
+    {x:103,y:8,s:42,r:-128,f:1,d:17,dl:-6,k:'palm',o:.9},
+    {x:-5,y:52,s:40,r:72,f:0,d:16,dl:-3,k:'fern',o:.75},
+    {x:104,y:66,s:48,r:-66,f:1,d:13,dl:-8,k:'palm',o:1},
+    {x:14,y:104,s:34,r:22,f:0,d:19,dl:-11,k:'broad',o:.8},
+    {x:84,y:105,s:30,r:-24,f:1,d:15,dl:-4,k:'broad',o:.7}
   ];
-  el.innerHTML=`<div class="jg-concrete"></div><div class="jg-rays"></div>`+F.map(c=>`<div class="jg-leaf" style="left:${c.x}%;top:${c.y}%;width:${c.s}vmax;height:${c.s}vmax;--r:${c.r}deg;--fx:${c.f?-1:1};--o:${c.o};animation-duration:${c.d}s;animation-delay:${c.dl}s">${LEAF_KIND[c.k]()}</div>`).join('');
+  el.innerHTML=`<div class="jg-concrete"></div><div class="jg-rays"></div>`+F.map(c=>`<div class="jg-leaf" style="left:calc(${c.x}vw - ${c.s/2}vmax);top:calc(${c.y}vh - ${c.s*.95}vmax);width:${c.s}vmax;height:${c.s}vmax;--r:${c.r}deg;--fx:${c.f?-1:1};--o:${c.o};animation-duration:${c.d}s;animation-delay:${c.dl}s">${LEAF_KIND[c.k]()}</div>`).join('');
 })();
 
 /* Animación de entrada: el logo de Kong entrando a la selva */
