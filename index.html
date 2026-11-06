@@ -303,6 +303,33 @@ label.f>span{display:block;font-size:13px;color:var(--muted);margin:0 0 6px 4px}
 .soc.map i{background:var(--wood)}
 .soc.full{grid-column:1/-1}
 
+/* ---------- Tacómetros (Progreso) ---------- */
+.gauges{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}
+.gauge{background:var(--surface);border-radius:var(--r-sm);padding:12px 6px 12px;text-align:center;box-shadow:var(--shadow);min-width:0;transition:transform .12s}
+.gauge[data-tap]{cursor:pointer}.gauge[data-tap]:active{transform:scale(.97)}
+.gauge svg{width:100%;max-width:112px;display:block;margin:0 auto}
+.g-track,.g-fill{fill:none;stroke-width:7;stroke-linecap:round}
+.g-track{stroke:var(--fill)}
+.g-fill{stroke:var(--leaf)}
+.gauge.full .g-fill{stroke:var(--wood)}
+.g-tick{stroke:var(--muted-2);stroke-width:1;stroke-linecap:round;opacity:.55}
+.g-tick.maj{stroke-width:1.6;opacity:.9}
+.g-needle line{stroke:var(--text);stroke-width:2.4;stroke-linecap:round}
+.g-hub{fill:var(--text)}
+.g-val{fill:var(--text);font-size:17px;font-weight:700;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.g-unit{font-size:10px;font-weight:500;fill:var(--muted)}
+.g-l{font-size:13px;font-weight:600;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 4px}
+.g-s{font-size:11px;color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 4px}
+.g-hero{padding:18px 18px 16px}
+.gauge.lg{background:none;box-shadow:none;padding:0}
+.gauge.lg svg{max-width:230px}
+.gauge.lg .g-track,.gauge.lg .g-fill{stroke-width:6}
+.gauge.lg .g-val{font-size:20px}
+.gauge.lg .g-l{font-size:15px;margin-top:4px}
+.gauge.lg .g-s{font-size:13px}
+.h-t{font-weight:600}
+.card.list{padding-top:4px;padding-bottom:4px}
+
 /* ---------- Pantallas chicas ---------- */
 @media (max-width:360px){
   #app{padding-left:14px;padding-right:14px}
@@ -1263,27 +1290,83 @@ function weekBars(){
     ${counts.map((c,i)=>{ const h=c/max*H; const x=i*(bw+8);
       return `<rect x="${x.toFixed(1)}" y="${(H-h).toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(h,2).toFixed(1)}" rx="4" style="fill:${c>=S.profile.days?'var(--leaf)':'var(--fill-2)'}"/>
       <text x="${(x+bw/2).toFixed(1)}" y="${H+14}" text-anchor="middle" font-size="10" style="fill:var(--muted)">${weeks[i].getDate()}/${weeks[i].getMonth()+1}</text>`; }).join('')}
-  </svg><p class="small muted">Días entrenados por semana. La línea dorada es tu meta (${S.profile.days} días).</p>`;
+  </svg><p class="small muted">Días por semana · la línea es tu meta de ${S.profile.days}</p>`;
 }
+/* ---------- Tacómetros ---------- */
+const G_START=150, G_SWEEP=240, G_R=44, G_C=60;
+function gPt(a,r){ const t=a*Math.PI/180; return [(G_C+r*Math.cos(t)).toFixed(2),(G_C+r*Math.sin(t)).toFixed(2)]; }
+function gauge(o){
+  // o: {p, to, dec, unit, label, sub, lg, tap}
+  const p=Math.max(0,Math.min(1,o.p||0)); const L=(G_R*G_SWEEP*Math.PI/180).toFixed(1);
+  const [x1,y1]=gPt(G_START,G_R), [x2,y2]=gPt(G_START+G_SWEEP,G_R);
+  let ticks=''; for(let i=0;i<=12;i++){ const a=G_START+i*G_SWEEP/12, maj=i%3===0; const [ax,ay]=gPt(a,G_R+7), [bx,by]=gPt(a,G_R+(maj?13:10));
+    ticks+=`<line x1="${ax}" y1="${ay}" x2="${bx}" y2="${by}" class="g-tick${maj?' maj':''}"/>`; }
+  const val = o.to==null ? '—' : '0';
+  return `<div class="gauge${o.lg?' lg':''}${p>=1?' full':''}"${o.tap?` data-tap="${o.tap}" role="button"`:''}>
+    <svg viewBox="0 0 120 106" aria-hidden="true">${ticks}
+      <path d="M${x1} ${y1}A${G_R} ${G_R} 0 1 1 ${x2} ${y2}" class="g-track"/>
+      <path d="M${x1} ${y1}A${G_R} ${G_R} 0 1 1 ${x2} ${y2}" class="g-fill" stroke-dasharray="${L}" stroke-dashoffset="${L}" data-len="${L}" data-p="${p}"/>
+      <g class="g-needle" transform="rotate(${G_START} ${G_C} ${G_C})"><line x1="${G_C-6}" y1="${G_C}" x2="${G_C+G_R-12}" y2="${G_C}"/></g>
+      <circle cx="${G_C}" cy="${G_C}" r="4.5" class="g-hub"/>
+      <text x="${G_C}" y="94" text-anchor="middle" class="g-val"><tspan class="g-num" data-to="${o.to==null?'':o.to}" data-dec="${o.dec||0}">${val}</tspan><tspan class="g-unit" dx="1">${o.to==null?'':esc(o.unit||'')}</tspan></text>
+    </svg>
+    <div class="g-l">${esc(o.label)}</div>${o.sub?`<div class="g-s">${esc(o.sub)}</div>`:''}
+  </div>`;
+}
+function animateGauges(root){
+  const items=[...root.querySelectorAll('.gauge')]; if(!items.length) return;
+  const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const D=1200, ease=t=>1-Math.pow(1-t,3);
+  const parts=items.map((g,i)=>{ const f=g.querySelector('.g-fill'), n=g.querySelector('.g-needle'), t=g.querySelector('.g-num');
+    return {f,n,t,len:+f.dataset.len,p:+f.dataset.p,to:t.dataset.to===''?null:+t.dataset.to,dec:+t.dataset.dec,delay:i*70}; });
+  const draw=(x,k)=>{ x.f.setAttribute('stroke-dashoffset',(x.len*(1-x.p*k)).toFixed(2));
+    x.n.setAttribute('transform',`rotate(${(G_START+G_SWEEP*x.p*k).toFixed(2)} ${G_C} ${G_C})`);
+    if(x.to!=null) x.t.textContent=(x.to*k).toLocaleString('es-MX',{minimumFractionDigits:x.dec,maximumFractionDigits:x.dec}); };
+  if(reduce){ parts.forEach(x=>draw(x,1)); return; }
+  const t0=performance.now();
+  (function frame(now){ let busy=false;
+    parts.forEach(x=>{ const t=Math.max(0,Math.min(1,(now-t0-x.delay)/D)); if(t<1) busy=true; draw(x,ease(t)); });
+    if(busy && document.body.contains(items[0])) requestAnimationFrame(frame); })(t0);
+}
+
 function renderProgreso(view,m){
-  const hist=S.sessions.slice().reverse().slice(0,25);
+  const idx=stageIdx(m), next=STAGES[idx+1], top=STAGES[STAGES.length-1], f=strengthFactor();
+  const bw=num(S.profile.weight), goal=(next||top).f*f;
+  const wk=daysThisWeek(), streak=streakWeeks(), dGoal=S.profile.days||3;
+  const tMonths=m.months, tLabel = tMonths<1 ? Math.floor(tMonths*4.35) : Math.floor(tMonths), tUnit = tMonths<1 ? ' sem' : ' m';
+  const SHARE={sentadilla:.36,banca:.26,muerto:.38};
+  const hist=S.sessions.slice().reverse().slice(0,15);
   view.innerHTML=`
-    <h1 style="margin-bottom:4px">Tu progreso</h1>
-    <p class="muted small" style="margin-bottom:12px">Fuerza estimada a 1 repetición máxima, calculada con tus series.</p>
-    ${KEY_LIFTS.map(k=>{ const s=liftSeries(k); const best=m.best[k];
-      return `<div class="card"><div class="lift"><span style="font-weight:700">${esc(EX[k].n)}</span><b>${best?Math.round(best)+' kg':'—'}</b></div>
-        ${best&&num(S.profile.weight)?`<div class="small muted">${(best/num(S.profile.weight)).toFixed(2)}× tu peso corporal</div>`:''}
-        ${lineChart(s)}</div>`; }).join('')}
-    <div class="card"><div class="lift"><span style="font-weight:700">Fuerza total</span><b>${m.ratio?m.ratio.toFixed(2)+'×':'—'}</b></div>
-      <div class="small muted">(Sentadilla + banca + peso muerto) ÷ tu peso. Es el número que cuenta para subir de etapa.</div></div>
+    <h1 style="margin-bottom:16px">Progreso</h1>
+    <div class="card g-hero">${gauge({lg:true,p:bw?m.ratio/goal:0,to:bw?m.ratio:null,dec:1,unit:'×',label:'Fuerza total',sub:bw?`Meta ${goal.toFixed(1)}× · ${next?next.n:'Kong'}`:'Agrega tu peso en Perfil'})}</div>
+    <h2>${next?`Hacia ${next.i} ${next.n}`:'Cima de la jungla'}</h2>
+    <div class="gauges">
+      ${gauge({p:next?tMonths/next.m:1,to:tLabel,unit:tUnit,label:'Tiempo',sub:next?`de ${next.m} m`:''})}
+      ${gauge({p:next?m.days/next.s:1,to:m.days,label:'Días',sub:next?`de ${next.s}`:''})}
+      ${gauge({p:wk/dGoal,to:wk,unit:`/${dGoal}`,label:'Semana',sub:streak?`${streak} sem seguidas`:'Meta semanal'})}
+    </div>
+    <h2>Levantamientos</h2>
+    <div class="gauges">
+      ${KEY_LIFTS.map(k=>{ const best=m.best[k]; const r=bw&&best?best/bw:0;
+        return gauge({p:r/(goal*SHARE[k]),to:best?Math.round(best):null,unit:' kg',label:({sentadilla:'Sentadilla',banca:'Banca',muerto:'Peso muerto'})[k],sub:r?`${r.toFixed(2)}× peso`:'Sin registro',tap:k}); }).join('')}
+    </div>
+    <p class="small muted center" style="margin-top:-2px">Toca un medidor para ver su tendencia</p>
     <h2>Constancia</h2><div class="card">${weekBars()}</div>
     <h2>Historial</h2>
-    <div class="card">${hist.length?hist.map(s=>{
+    <div class="card list">${hist.length?hist.map(s=>{
       const vol=(s.sets||[]).reduce((a,x)=>a+x.w*x.r,0);
-      return `<div class="hist"><div><div style="font-weight:700">${esc(s.dayName||'Entrenamiento')}</div>
+      return `<div class="hist"><div><div class="h-t">${esc(s.dayName||'Entrenamiento')}</div>
         <div class="small muted">${fmtDate(s.date)}${s.sets&&s.sets.length?` · ${s.sets.length} series · ${Math.round(vol).toLocaleString('es-MX')} kg`:''}</div></div>
         <button class="x" data-id="${s.id}" aria-label="Borrar">✕</button></div>`; }).join('')
-      :'<div class="empty">Aún no hay entrenamientos. ¡El primero es el más importante! 🌱</div>'}</div>`;
+      :'<div class="empty">Aún no hay entrenamientos</div>'}</div>`;
+  animateGauges(view);
+  view.querySelectorAll('.gauge[data-tap]').forEach(g=>g.onclick=()=>{
+    const k=g.dataset.tap, best=m.best[k];
+    openModal(`<div class="eyebrow">Fuerza estimada (1 rep máx.)</div><h3 style="margin:4px 0 2px">${esc(EX[k].n)}</h3>
+      <div class="lift"><span class="muted small">Mejor marca</span><b>${best?Math.round(best)+' kg':'—'}</b></div>
+      ${lineChart(liftSeries(k))}<div style="height:14px"></div><button class="btn ghost" id="mOk">Listo</button>`);
+    $('#mOk').onclick=closeModal;
+  });
   view.querySelectorAll('.x').forEach(b=>b.onclick=()=>confirmBox('¿Borrar este registro?','Borrar',()=>{
     S.sessions=S.sessions.filter(s=>String(s.id)!==b.dataset.id); save(); render();
   }));
