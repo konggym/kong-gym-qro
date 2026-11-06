@@ -67,15 +67,17 @@
 
 *{box-sizing:border-box;margin:0;padding:0}
 html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
-html,body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:16px;line-height:1.42;letter-spacing:-.011em}
-body{min-height:100vh;overscroll-behavior-y:none;-webkit-font-smoothing:antialiased;
+html{background:var(--bg)}
+html,body{color:var(--text);font-family:var(--font);font-size:16px;line-height:1.42;letter-spacing:-.011em}
+body{min-height:100vh;overscroll-behavior-y:none;-webkit-font-smoothing:antialiased;background:transparent}
+html{
   /* luz natural cayendo desde un tragaluz */
   background:
     linear-gradient(115deg,transparent 18%,rgba(255,248,232,.55) 30%,transparent 46%),
     linear-gradient(180deg,var(--bg) 0%,var(--bg-2) 100%);
   background-attachment:fixed}
 @media (prefers-color-scheme:dark){
-  body{background:
+  html{background:
     linear-gradient(115deg,transparent 18%,rgba(255,240,215,.05) 30%,transparent 46%),
     linear-gradient(180deg,var(--bg-2) 0%,var(--bg) 100%);background-attachment:fixed}
 }
@@ -393,7 +395,7 @@ label.f>span{display:block;font-size:13px;color:var(--muted);margin:0 0 6px 4px}
 #splash.out{animation:spOut .6s cubic-bezier(.4,0,.2,1) forwards}
 .sp-center{position:relative;z-index:3;display:flex;flex-direction:column;align-items:center}
 .sp-logo{width:min(60vw,250px);opacity:0;transform:scale(.42);filter:blur(16px);
-  -webkit-mask-image:radial-gradient(closest-side,#000 60%,transparent 100%);mask-image:radial-gradient(closest-side,#000 60%,transparent 100%);
+  -webkit-mask-image:radial-gradient(closest-side,#000 48%,transparent 96%);mask-image:radial-gradient(closest-side,#000 48%,transparent 96%);
   animation:spLogo 1.6s .5s cubic-bezier(.16,.84,.24,1) forwards}
 .sp-tag{margin-top:2px;color:#cfd8c4;font-size:15px;font-weight:500;letter-spacing:.5em;text-transform:uppercase;opacity:0;transform:translateY(6px);animation:spTag .8s 1.55s ease forwards;padding-left:.5em}
 .sp-leaf{position:absolute;left:50%;top:50%;width:46vmax;height:46vmax;margin:-23vmax 0 0 -23vmax;z-index:2;opacity:0;
@@ -506,9 +508,9 @@ const LEAF_KIND={palm:()=>frondSVG(),broad:broadSVG,fern:fernSVG};
   const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
   if(seen){ sp.remove(); return; }
   const leaves=[ // hojas que pasan junto a la "cámara" mientras avanzamos hacia la selva
-    {a:-150,k:'palm',dl:0,c:'#2f5524'},{a:-20,k:'broad',dl:.08,c:'#3d6b2e'},{a:160,k:'palm',dl:.16,c:'#24431c'},
-    {a:35,k:'fern',dl:.26,c:'#4a7a34'},{a:-95,k:'broad',dl:.34,c:'#2b4d21'},{a:100,k:'palm',dl:.44,c:'#3a6629'},
-    {a:-60,k:'fern',dl:.55,c:'#335c26'},{a:-175,k:'broad',dl:.62,c:'#406f30'}
+    {a:-150,k:'palm',dl:0,c:'#21401a'},{a:-20,k:'broad',dl:.08,c:'#2c5222'},{a:160,k:'palm',dl:.16,c:'#1a3414'},
+    {a:35,k:'fern',dl:.26,c:'#355f28'},{a:-95,k:'broad',dl:.34,c:'#1f3b18'},{a:100,k:'palm',dl:.44,c:'#2a4d20'},
+    {a:-60,k:'fern',dl:.55,c:'#24461c'},{a:-175,k:'broad',dl:.62,c:'#30592a'}
   ];
   sp.innerHTML=`<div class="sp-rays"></div>
     ${leaves.map(l=>`<div class="sp-leaf" style="--a:${l.a}deg;color:${l.c};animation-delay:${l.dl}s">${LEAF_KIND[l.k]()}</div>`).join('')}
