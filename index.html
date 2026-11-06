@@ -333,6 +333,39 @@ label.f>span{display:block;font-size:13px;color:var(--muted);margin:0 0 6px 4px}
 .h-t{font-weight:600}
 .card.list{padding-top:4px;padding-bottom:4px}
 
+/* ---------- Rutina (listas iOS) ---------- */
+.next-card{display:flex;align-items:center;gap:14px;width:100%;text-align:left;padding:18px 18px 18px 20px;background:var(--surface);border-radius:var(--r);box-shadow:var(--shadow);transition:transform .12s}
+.next-card:active{transform:scale(.985)}
+.nc-main{flex:1;min-width:0;display:flex;flex-direction:column}
+.nc-k{font-size:13px;font-weight:600;color:var(--leaf)}
+.nc-t{font-size:26px;font-weight:700;letter-spacing:-.025em;line-height:1.15;margin:1px 0 3px}
+.nc-s{font-size:14px;color:var(--muted)}
+.play{width:56px;height:56px;border-radius:50%;background:var(--leaf);color:var(--ink);display:grid;place-items:center;flex:none;box-shadow:0 8px 20px -10px var(--leaf)}
+.play svg{width:24px;height:24px;margin-left:3px}
+.grp-h{font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;margin:28px 0 7px 16px}
+.ios-list{background:var(--surface);border-radius:var(--r-sm);box-shadow:var(--shadow);overflow:hidden}
+.row-i{display:flex;align-items:center;gap:12px;width:100%;min-height:58px;padding:10px 12px 10px 16px;text-align:left;position:relative;cursor:pointer;transition:background .12s;color:var(--text)}
+.row-i+.row-i::before{content:"";position:absolute;top:0;right:0;left:16px;height:.5px;background:var(--line)}
+.ios-list .row-i:has(.dnum)+.row-i::before{left:58px}
+.row-i:active{background:var(--fill)}
+.row-i .dnum{width:30px;height:30px;font-size:14px}
+.ri-main{flex:1;min-width:0;display:flex;flex-direction:column}
+.ri-t{font-size:17px;letter-spacing:-.015em}
+.ri-s{font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row-i.red .ri-t{color:var(--danger)}
+.badge{font-size:12px;font-weight:600;color:var(--leaf);background:var(--leaf-soft);padding:3px 9px;border-radius:99px;flex:none}
+.info-b{width:34px;height:34px;border-radius:50%;color:var(--leaf);display:grid;place-items:center;flex:none}
+.info-b svg{width:23px;height:23px}
+.chev{color:var(--muted-2);display:grid;place-items:center;flex:none}
+.chev svg{width:16px;height:16px}
+.row-i select{width:auto;min-height:0;padding:0 20px 0 0;background-color:transparent;color:var(--muted);text-align:right;font-size:17px;background-position:right 0 center;box-shadow:none}
+.row-i select:focus{box-shadow:none}
+.foot{font-size:13px;color:var(--muted);margin:8px 16px 0}
+.live-h{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;color:var(--leaf);font-variant-numeric:tabular-nums}
+.live-dot{width:8px;height:8px;border-radius:50%;background:var(--leaf);animation:pulse 1.6s ease-in-out infinite}
+.live-c{margin-left:auto;color:var(--muted);font-weight:500}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
 /* ---------- Pantallas chicas ---------- */
 @media (max-width:360px){
   #app{padding-left:14px;padding-right:14px}
@@ -887,7 +920,7 @@ function renderInicio(view,m){
     <button class="btn ghost" id="quick">✓ Solo registrar que vine hoy</button>
     <h2>Kong Gym</h2>
     ${contactCard(true)}`;
-  const g=$('#goTrain'); if(g) g.onclick=()=>{ ui.mode=rk==='custom'?'custom':'kong'; ui.rk=rk==='custom'?null:rk; ui.day=sug; go('rutina'); };
+  const g=$('#goTrain'); if(g) g.onclick=()=>{ ui.mode=rk==='custom'?'custom':'kong'; ui.rk=null; ui.day=null; location.hash='rutina'; startDraft(rk,sugDay); };
   const gd=$('#goDraft'); if(gd) gd.onclick=()=>go('rutina');
   const ab=$('#addBirth'); if(ab) ab.onclick=()=>go('perfil');
   const rl=$('#memRelink'); if(rl) rl.onclick=()=>go('perfil');
@@ -945,33 +978,68 @@ function renderRutina(view,m){
   view.querySelectorAll('#modeSeg button').forEach(b=>b.onclick=()=>{ ui.mode=b.dataset.m; ui.rk=null; ui.day=null; render(); });
 }
 
+/* ---------- Lista de días (estilo iOS) ---------- */
+const IC={
+  play:'<svg viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></svg>',
+  info:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M12 11v5.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="7.8" r="1.1" fill="currentColor"/></svg>',
+  chev:'<svg viewBox="0 0 24 24"><path d="M9.5 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+};
+function dayStats(day){ const sets=day.ex.reduce((a,x)=>a+(+x[1]||0),0); const min=Math.max(15,Math.round(sets*2.6/5)*5); return {n:day.ex.length,sets,min}; }
+function dayListHTML(r,sug){
+  const nx=r.days.find(d=>d.k===sug)||r.days[0]; const ns=dayStats(nx);
+  return `<button class="next-card" data-d="${nx.k}">
+      <span class="nc-main"><span class="nc-k">Siguiente</span><span class="nc-t">${esc(nx.n)}</span>
+      <span class="nc-s">${ns.n} ejercicios · ${ns.sets} series · ≈ ${ns.min} min</span></span>
+      <span class="play" aria-hidden="true">${IC.play}</span></button>
+    <div class="grp-h">Todos los días</div>
+    <div class="ios-list">${r.days.map((d,i)=>{ const st=dayStats(d);
+      return `<div class="row-i" role="button" tabindex="0" data-d="${d.k}">
+        <span class="dnum">${i+1}</span>
+        <span class="ri-main"><span class="ri-t">${esc(d.n)}</span><span class="ri-s">${st.n} ejercicios · ≈ ${st.min} min</span></span>
+        ${d.k===sug?'<span class="badge">Sigue</span>':''}
+        <button class="info-b" data-info="${d.k}" aria-label="Ver ejercicios">${IC.info}</button></div>`; }).join('')}
+    </div>
+    <p class="foot">Toca un día para empezar · ⓘ para ver sus ejercicios</p>`;
+}
+function bindDayList(view,r,rk){
+  const start=k=>{ const d=r.days.find(x=>x.k===k); if(d) startDraft(rk,d); };
+  view.querySelectorAll('.next-card').forEach(b=>b.onclick=()=>start(b.dataset.d));
+  view.querySelectorAll('.row-i[data-d]').forEach(row=>{
+    row.onclick=e=>{ const ib=e.target.closest('.info-b'); if(ib){ e.stopPropagation(); previewDay(r,rk,ib.dataset.info); return; } start(row.dataset.d); };
+    row.onkeydown=e=>{ if(e.key==='Enter') start(row.dataset.d); };
+  });
+}
+function previewDay(r,rk,k){
+  const d=r.days.find(x=>x.k===k); const st=dayStats(d);
+  openModal(`<h3 style="font-size:22px">${esc(d.n)}</h3><p class="muted small" style="margin:2px 0 14px">${st.n} ejercicios · ${st.sets} series · ≈ ${st.min} min</p>
+    ${d.ex.map(([id,sets,reps,note])=>exCard(id,sets,reps,note)).join('')}
+    <div style="height:6px"></div><button class="btn" id="pvGo">Empezar</button><button class="btn ghost solid" id="pvNo">Cerrar</button>`);
+  $('#pvGo').onclick=()=>{ closeModal(); startDraft(rk,d); };
+  $('#pvNo').onclick=closeModal;
+}
+
 function renderKong(view,m,tabs){
   const curRk=levelRk();
   const rk=ui.rk && R[ui.rk] ? ui.rk : curRk;
   const r=getRoutine(rk); const sug=suggestedDay(rk);
-  const dayK=ui.day && r.days.some(d=>d.k===ui.day) ? ui.day : sug;
-  const day=r.days.find(d=>d.k===dayK);
   const L=LEVELS.find(l=>l.k===r.level); const g=ageGroup();
-  const freqNote = S.profile.days<r.freq && rk===curRk
-    ? `<div class="note">Esta rutina está pensada para ${r.freq} días y tú marcaste ${S.profile.days}. No pasa nada: haz los días en orden aunque el ciclo tome más de una semana.</div>` : '';
-  const usingCustom = currentRk()==='custom' ? `<div class="note">Tu rutina principal es la <b>personalizada</b>. Aquí puedes consultar la rutina Kong de tu nivel.</div>` : '';
+  const notes=[`<b>${esc(g==='joven'?r.focus.replace(/ y la última serie[^.]*/,''):r.focus)}</b>`, esc(AGE[g].note)];
+  if(S.profile.days<r.freq && rk===curRk) notes.push(`Esta rutina es de ${r.freq} días y marcaste ${S.profile.days}: haz los días en orden aunque el ciclo tome más de una semana.`);
+  if(currentRk()==='custom') notes.push('Tu rutina principal es la personalizada; aquí consultas la rutina Kong de tu nivel.');
   view.innerHTML=`${tabs}
-    <div class="eyebrow">${L.i} Nivel ${L.n}${rk!==curRk?' · (no es tu nivel)':''}</div>
-    <h1 style="margin:4px 0 4px">${esc(r.n)}</h1>
-    <p class="muted small" style="margin-bottom:12px">Pecho · Espalda · Pierna ×2 · ${r.freq} días${S.profile.birth?' · ajustada a '+AGE[g].n:''}</p>
-    ${usingCustom}
-    <div class="note"><b>${esc(g==='joven'?r.focus.replace(/ y la última serie[^.]*/,''):r.focus)}</b><br>${esc(AGE[g].note)}</div>
-    ${freqNote}
-    <div class="pills">${r.days.map(d=>`<button class="pill ${d.k===dayK?'on':''}" data-d="${d.k}">${esc(d.n)}${d.k===sug?'<span class="sug">sigue</span>':''}</button>`).join('')}</div>
-    ${day.ex.map(([id,sets,reps])=>exCard(id,sets,reps)).join('')}
-    <div style="height:10px"></div>
-    <button class="btn" id="start">Empezar este entrenamiento</button>
-    <label class="f" style="margin-top:22px"><span>Ver la rutina de otro nivel</span>
-      <select id="otherLevel">${LEVELS.map(l=>{ const k=rkForLevel(l.k); return `<option value="${k}" ${k===rk?'selected':''}>${l.i} ${l.n}${k===curRk?' (tu nivel)':''}</option>`; }).join('')}</select></label>
-    <p class="small muted">Las rutinas son una guía general. Pide a tu entrenador de Kong Gym que ajuste pesos y ejercicios a ti.</p>`;
-  view.querySelectorAll('.pill').forEach(p=>p.onclick=()=>{ ui.day=p.dataset.d; ui.rk=rk; render(); });
+    <h1 style="margin:2px 0 2px">${esc(r.n)}</h1>
+    <p class="muted small" style="margin-bottom:16px">${L.i} ${L.n}${rk!==curRk?' (no es tu nivel)':''} · ${r.freq} días${S.profile.birth?' · '+AGE[g].n:''}</p>
+    ${dayListHTML(r,sug)}
+    <div class="grp-h">Rutina</div>
+    <div class="ios-list">
+      <div class="row-i" role="button" tabindex="0" id="rNotes"><span class="ri-main"><span class="ri-t">Indicaciones</span></span><span class="chev">${IC.chev}</span></div>
+      <label class="row-i"><span class="ri-main"><span class="ri-t">Nivel</span></span>
+        <select id="otherLevel">${LEVELS.map(l=>{ const k=rkForLevel(l.k); return `<option value="${k}" ${k===rk?'selected':''}>${l.n}${k===curRk?' (tuyo)':''}</option>`; }).join('')}</select></label>
+    </div>
+    <p class="foot">Las rutinas son una guía general. Tu entrenador de Kong Gym puede ajustar pesos y ejercicios.</p>`;
+  bindDayList(view,r,rk);
   $('#otherLevel').onchange=e=>{ ui.rk=e.target.value; ui.day=null; render(); };
-  $('#start').onclick=()=>startDraft(rk,day);
+  $('#rNotes').onclick=()=>{ openModal(`<h3 style="font-size:22px;margin-bottom:12px">Indicaciones</h3>${notes.map(n=>`<p style="margin-bottom:12px">${n}</p>`).join('')}<button class="btn ghost solid" id="nOk">Listo</button>`); $('#nOk').onclick=closeModal; };
 }
 
 /* ---------- Personalizada: vista del socio ---------- */
@@ -979,38 +1047,32 @@ function renderCustom(view,tabs){
   if(!hasCustom()){
     view.innerHTML=`${tabs}
       <div class="card center" style="padding:26px 18px">
-        <div style="font-size:48px">🧑‍🏫</div>
-        <h2 style="margin:8px 0 6px">Rutina personalizada</h2>
+        <h3 style="font-size:22px;margin-bottom:6px">Rutina personalizada</h3>
         <p class="muted" style="margin-bottom:18px">Si tu instructor de Kong Gym te armó una rutina, aquí la tienes con la misma interfaz: registras tus series y cuenta para tu progreso y tus etapas.</p>
         <button class="btn" id="cImport">Pegar código de mi instructor</button>
-        <button class="btn ghost" id="cCreate">🔒 Crear rutina (instructor)</button>
+        <button class="btn ghost" id="cCreate">Crear rutina · instructor</button>
       </div>`;
     $('#cImport').onclick=importModal;
     $('#cCreate').onclick=()=>coachGate(()=>openEditor(null));
     return;
   }
   const r=customRoutine(); const sug=suggestedDay('custom');
-  const dayK=ui.day && r.days.some(d=>d.k===ui.day) ? ui.day : sug;
-  const day=r.days.find(d=>d.k===dayK);
   const main=currentRk()==='custom';
   view.innerHTML=`${tabs}
-    <div class="eyebrow">🧑‍🏫 Personalizada${r.coach?' · por '+esc(r.coach):''}</div>
-    <h1 style="margin:4px 0 4px">${esc(r.n)}</h1>
-    <p class="muted small" style="margin-bottom:12px">${r.days.length} ${r.days.length===1?'día':'días'}${S.custom.updated?' · actualizada '+fmtDate(S.custom.updated):''}</p>
-    ${r.focus?`<div class="note"><b>Indicaciones de tu instructor:</b><br>${esc(r.focus)}</div>`:''}
-    <button class="switch-row" id="cMain"><span><b>Usar como mi rutina principal</b><br><span class="small muted">Inicio te sugerirá estos días</span></span><span class="switch ${main?'on':''}"><i></i></span></button>
-    <div class="pills">${r.days.map(d=>`<button class="pill ${d.k===dayK?'on':''}" data-d="${d.k}">${esc(d.n)}${d.k===sug?'<span class="sug">sigue</span>':''}</button>`).join('')}</div>
-    ${day.ex.map(([id,sets,reps,note])=>exCard(id,sets,reps,note)).join('')}
-    <div style="height:10px"></div>
-    <button class="btn" id="start">Empezar este entrenamiento</button>
-    <div class="actions">
-      <button class="act" id="cEdit"><span>✏️</span>Editar<small>instructor</small></button>
-      <button class="act" id="cShare"><span>📤</span>Compartir<small>código</small></button>
-      <button class="act" id="cImport"><span>📥</span>Importar<small>otra</small></button>
-      <button class="act" id="cDel"><span>🗑️</span>Eliminar<small>rutina</small></button>
-    </div>`;
-  view.querySelectorAll('.pill').forEach(p=>p.onclick=()=>{ ui.day=p.dataset.d; render(); });
-  $('#start').onclick=()=>startDraft('custom',day);
+    <h1 style="margin:2px 0 2px">${esc(r.n)}</h1>
+    <p class="muted small" style="margin-bottom:16px">Personalizada${r.coach?' · '+esc(r.coach):''} · ${r.days.length} ${r.days.length===1?'día':'días'}</p>
+    ${r.focus?`<div class="note">${esc(r.focus)}</div>`:''}
+    ${dayListHTML(r,sug)}
+    <div class="grp-h">Opciones</div>
+    <div class="ios-list">
+      <button class="row-i" id="cMain"><span class="ri-main"><span class="ri-t">Rutina principal</span><span class="ri-s">Inicio te sugerirá estos días</span></span><span class="switch ${main?'on':''}"><i></i></span></button>
+      <button class="row-i" id="cEdit"><span class="ri-main"><span class="ri-t">Editar rutina</span><span class="ri-s">Instructor</span></span><span class="chev">${IC.chev}</span></button>
+      <button class="row-i" id="cShare"><span class="ri-main"><span class="ri-t">Compartir código</span></span><span class="chev">${IC.chev}</span></button>
+      <button class="row-i" id="cImport"><span class="ri-main"><span class="ri-t">Importar otra rutina</span></span><span class="chev">${IC.chev}</span></button>
+    </div>
+    <div class="ios-list" style="margin-top:14px"><button class="row-i red" id="cDel"><span class="ri-main"><span class="ri-t">Eliminar rutina</span></span></button></div>
+    ${S.custom.updated?`<p class="foot">Actualizada ${fmtDate(S.custom.updated)}</p>`:''}`;
+  bindDayList(view,r,'custom');
   $('#cMain').onclick=()=>{ S.useCustom=!main; save(); toast(S.useCustom?'Ahora tu rutina principal es la personalizada':'Volviste a la rutina Kong de tu nivel'); render(); };
   $('#cEdit').onclick=()=>coachGate(()=>openEditor(S.custom));
   $('#cShare').onclick=shareModal;
@@ -1195,8 +1257,9 @@ function pickerModal(di,done){
 function renderDraft(view){
   const d=S.draft;
   view.innerHTML=`
-    <div class="eyebrow">Entrenamiento en curso</div>
-    <h1 style="margin:4px 0 12px">${esc(d.dayName)}</h1>
+    <div class="live-h"><span class="live-dot"></span><span id="liveT">En curso</span><span class="live-c" id="liveC"></span></div>
+    <h1 style="margin:4px 0 10px">${esc(d.dayName)}</h1>
+    <div class="bar" style="margin:0 0 16px"><i id="liveBar" style="width:0%"></i></div>
     ${d.ex.map((x,i)=>{
       const e=exInfo(x.id); const last=lastSetsFor(x.id);
       return `<div class="ex"><div class="ex-h"><div class="ex-n">${esc(e.n)}${e.k?'<span class="tag">Clave</span>':''}</div><div class="ex-p">${x.sets.length}×${esc(x.reps)}</div></div>
@@ -1211,9 +1274,9 @@ function renderDraft(view){
           <button class="chk ${s.done?'on':''}" data-i="${i}" data-j="${j}">✓</button></div>`;}).join('')}
       </div></div>`;
     }).join('')}
-    <button class="btn ghost" id="cancel" style="margin-top:6px">Descartar entrenamiento</button>
+    <button class="btn danger" id="cancel" style="margin-top:6px">Descartar entrenamiento</button>
     <div style="height:70px"></div>
-    <div class="sticky-finish"><button class="btn" id="finish">Terminar y guardar 🦍</button></div>`;
+    <div class="sticky-finish"><button class="btn" id="finish">Terminar y guardar</button></div>`;
   view.querySelectorAll('input[data-f]').forEach(inp=>inp.oninput=()=>{
     const s=d.ex[inp.dataset.i].sets[inp.dataset.j]; s[inp.dataset.f]=inp.value; save();
   });
@@ -1226,8 +1289,12 @@ function renderDraft(view){
       if(!s.w && w.placeholder && /^\d/.test(w.placeholder)){ s.w=w.placeholder; w.value=s.w; }
       if(!num(s.r)){ toast('Escribe tus repeticiones'); return; }
     }
-    s.done=!s.done; b.classList.toggle('on',s.done); save();
+    s.done=!s.done; b.classList.toggle('on',s.done); save(); liveUpd();
   });
+  const liveUpd=()=>{ const all=d.ex.reduce((a,x)=>a+x.sets.length,0), done=d.ex.reduce((a,x)=>a+x.sets.filter(z=>z.done).length,0);
+    const c=$('#liveC'), bar=$('#liveBar'); if(c) c.textContent=done+'/'+all+' series'; if(bar) bar.style.width=(all?done/all*100:0).toFixed(1)+'%';
+    const t=$('#liveT'); if(t){ const sec=Math.max(0,Math.floor((Date.now()-new Date(d.started).getTime())/1000)); t.textContent=Math.floor(sec/60)+':'+pad(sec%60); } };
+  liveUpd(); clearInterval(ui.liveTimer); ui.liveTimer=setInterval(()=>{ if(!$('#liveT')){ clearInterval(ui.liveTimer); return; } liveUpd(); },1000);
   $('#cancel').onclick=()=>confirmBox('¿Descartar este entrenamiento?','Sí, descartar',()=>{ S.draft=null; save(); render(); });
   $('#finish').onclick=()=>{
     const sets=[];
