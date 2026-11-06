@@ -327,6 +327,9 @@ label.f>span{display:block;font-size:13px;color:var(--muted);margin:0 0 6px 4px}
 .gauge.lg .g-val{font-size:20px}
 .gauge.lg .g-l{font-size:15px;margin-top:4px}
 .gauge.lg .g-s{font-size:13px}
+.gauges.two{grid-template-columns:1fr 1fr}
+.gauges.two .gauge svg{max-width:132px}
+.gauges.two .g-l{font-size:15px}
 .h-t{font-weight:600}
 .card.list{padding-top:4px;padding-bottom:4px}
 
@@ -803,6 +806,17 @@ function critRow(label, val, need, fmt){
     <div class="bar ${pct>=100?'done':''}"><i style="width:${pct.toFixed(1)}%"></i></div></div>`;
 }
 function monthsLabel(v){ if(v<1) return 'menos de 1 mes'; const n=Math.ceil(v); return n+(n===1?' mes':' meses'); }
+function jungleGauges(m){
+  const idx=stageIdx(m), st=STAGES[idx], nx=STAGES[idx+1], f=strengthFactor();
+  const sp = nx ? Math.min(nx.m?m.months/nx.m:1, nx.s?m.days/nx.s:1, nx.f?m.ratio/(nx.f*f):1) : 1;
+  const li=levelIdx(m.months), L=LEVELS[li], ln=LEVELS[li+1];
+  const lp = ln ? (m.months-L.from)/(ln.from-L.from) : 1;
+  const noBirth=!S.profile.birth?`<button class="btn ghost sm" id="addBirth">Agrega tu fecha de nacimiento para ajustar tu rutina</button>`:'';
+  return `<div class="gauges two">
+    ${gauge({p:sp,to:Math.round(Math.min(1,sp)*100),unit:'%',label:`${st.i} ${st.n}`,sub:nx?`Etapa · hacia ${nx.n}`:'Etapa máxima',tap:'etapa'})}
+    ${gauge({p:lp,to:Math.round(Math.min(1,lp)*100),unit:'%',label:`${L.i} ${L.n}`,sub:ln?`Nivel · faltan ${monthsLabel(ln.from-m.months)}`:'Nivel máximo',tap:'nivel'})}
+  </div>${noBirth}`;
+}
 function levelCard(m){
   const li=levelIdx(m.months), L=LEVELS[li], nx=LEVELS[li+1];
   const rk=levelRk(), r=getRoutine(rk), g=ageGroup();
@@ -854,32 +868,15 @@ function contactCard(withHours){
 }
 
 function renderInicio(view,m){
-  const idx=stageIdx(m), st=STAGES[idx], next=STAGES[idx+1], f=strengthFactor();
   const rk=currentRk(), r=routineByRk(rk); const sug=suggestedDay(rk); const sugDay=r.days.find(d=>d.k===sug);
   const today=ymd(new Date()); const doneToday=S.sessions.some(s=>ymd(new Date(s.date))===today);
   const first=(S.profile.name||'').split(' ')[0];
-  let prog;
-  if(next){
-    prog=`<div style="margin-top:16px;font-weight:700">Para llegar a ${next.i} ${next.n}</div>
-      ${critRow('⏳ Tiempo en Kong Gym', m.months, next.m, v=>v<1&&v>0? (v*4.35).toFixed(0)+' sem' : Math.floor(v)+' m')}
-      ${critRow('📅 Días entrenados', m.days, next.s, v=>Math.floor(v))}
-      ${critRow('💪 Fuerza (× tu peso)', m.ratio, next.f*f, v=>v.toFixed(1)+'×')}
-      <p class="small muted" style="margin-top:10px">Necesitas cumplir las tres para subir de etapa.</p>`;
-  } else {
-    prog=`<p style="margin-top:14px">Llegaste a la cima de la jungla. Ahora toca mantener el trono. 👑</p>`;
-  }
   view.innerHTML=`
     <h1>Hola, ${esc(first)}</h1>
     <p class="muted" style="margin-bottom:14px">${doneToday?'Hoy ya entrenaste. ¡Así se hace! 🌿':'¿Listo para entrenar hoy?'}</p>
     ${memberCard()}
     ${installCard(false)}
-    <div class="card hero">${LEAF_SVG}
-      <div class="eyebrow">Etapa ${idx+1} de ${STAGES.length}</div>
-      <div style="display:flex;align-items:center;gap:12px;margin-top:6px"><div class="stage-ico">${st.i}</div><h1>${st.n}</h1></div>
-      <p class="muted" style="margin-top:8px">${st.d}</p>
-      ${prog}
-    </div>
-    ${levelCard(m)}
+    ${jungleGauges(m)}
     <div class="stats">
       <div class="stat"><b>${daysThisWeek()}/${S.profile.days}</b><span>Esta semana</span></div>
       <div class="stat"><b>${streakWeeks()}</b><span>Semanas seguidas</span></div>
@@ -894,6 +891,8 @@ function renderInicio(view,m){
   const gd=$('#goDraft'); if(gd) gd.onclick=()=>go('rutina');
   const ab=$('#addBirth'); if(ab) ab.onclick=()=>go('perfil');
   const rl=$('#memRelink'); if(rl) rl.onclick=()=>go('perfil');
+  animateGauges(view);
+  view.querySelectorAll('.gauge[data-tap]').forEach(g=>g.onclick=()=>go('etapas'));
   bindInstall(); refreshMember(false);
   $('#quick').onclick=()=>{
     if(doneToday){ toast('Ya registraste tu visita de hoy'); return; }
@@ -1334,7 +1333,6 @@ function renderProgreso(view,m){
   const bw=num(S.profile.weight), goal=(next||top).f*f;
   const wk=daysThisWeek(), streak=streakWeeks(), dGoal=S.profile.days||3;
   const tMonths=m.months, tLabel = tMonths<1 ? Math.floor(tMonths*4.35) : Math.floor(tMonths), tUnit = tMonths<1 ? ' sem' : ' m';
-  const SHARE={sentadilla:.36,banca:.26,muerto:.38};
   const hist=S.sessions.slice().reverse().slice(0,15);
   view.innerHTML=`
     <h1 style="margin-bottom:16px">Progreso</h1>
@@ -1345,12 +1343,6 @@ function renderProgreso(view,m){
       ${gauge({p:next?m.days/next.s:1,to:m.days,label:'Días',sub:next?`de ${next.s}`:''})}
       ${gauge({p:wk/dGoal,to:wk,unit:`/${dGoal}`,label:'Semana',sub:streak?`${streak} sem seguidas`:'Meta semanal'})}
     </div>
-    <h2>Levantamientos</h2>
-    <div class="gauges">
-      ${KEY_LIFTS.map(k=>{ const best=m.best[k]; const r=bw&&best?best/bw:0;
-        return gauge({p:r/(goal*SHARE[k]),to:best?Math.round(best):null,unit:' kg',label:({sentadilla:'Sentadilla',banca:'Banca',muerto:'Peso muerto'})[k],sub:r?`${r.toFixed(2)}× peso`:'Sin registro',tap:k}); }).join('')}
-    </div>
-    <p class="small muted center" style="margin-top:-2px">Toca un medidor para ver su tendencia</p>
     <h2>Constancia</h2><div class="card">${weekBars()}</div>
     <h2>Historial</h2>
     <div class="card list">${hist.length?hist.map(s=>{
@@ -1360,13 +1352,6 @@ function renderProgreso(view,m){
         <button class="x" data-id="${s.id}" aria-label="Borrar">✕</button></div>`; }).join('')
       :'<div class="empty">Aún no hay entrenamientos</div>'}</div>`;
   animateGauges(view);
-  view.querySelectorAll('.gauge[data-tap]').forEach(g=>g.onclick=()=>{
-    const k=g.dataset.tap, best=m.best[k];
-    openModal(`<div class="eyebrow">Fuerza estimada (1 rep máx.)</div><h3 style="margin:4px 0 2px">${esc(EX[k].n)}</h3>
-      <div class="lift"><span class="muted small">Mejor marca</span><b>${best?Math.round(best)+' kg':'—'}</b></div>
-      ${lineChart(liftSeries(k))}<div style="height:14px"></div><button class="btn ghost" id="mOk">Listo</button>`);
-    $('#mOk').onclick=closeModal;
-  });
   view.querySelectorAll('.x').forEach(b=>b.onclick=()=>confirmBox('¿Borrar este registro?','Borrar',()=>{
     S.sessions=S.sessions.filter(s=>String(s.id)!==b.dataset.id); save(); render();
   }));
